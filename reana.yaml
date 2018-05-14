@@ -1,0 +1,11 @@
+# TODO
+#
+# command sequence:
+#
+# source /cvmfs/lhcb.cern.ch/lib/LbLogin.sh
+# lb-run DaVinci/latest bash -f
+# root Optimise.C
+# root ModelFixing.C
+# mkdir fitresults
+# mkdir mass_fits
+# root OSMassFit.C 
