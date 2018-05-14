@@ -13,13 +13,8 @@ bool PlotMass = true;
 string bachelor = "Pi";
 
 // Get the data
-//TFile f1 = TFile();
-//if (bachelor=="Pi"){TFile f1(TString("/eos/lhcb/user/a/atrisovi/analysis-case-study/Step3_cuts/D2"+bachelor+"MuMuOS.root"), "read");}
-//if (bachelor=="K"){TFile f1("/eos/lhcb/user/a/atrisovi/analysis-case-study/Step2_getMonteCarlo/D2Kmumu/ReduceMCKmumu/MCKMuMu-all.root", "read");}
 
-TFile f1("../1_preselection/D2PiMuMuOS.root", "read");
-///eos/lhcb/user/a/atrisovi/analysis-case-study/Step2_getMonteCarlo/D2Kmumu/D2KMuMuOS.root", "read");
-//TFile f1(TString("/eos/lhcb/user/a/atrisovi/analysis-case-study/Step3_cuts/D2"+bachelor+"MuMuOS.root"), "read");
+TFile f1("../data/D2PiMuMuOS.root", "read");
 
 RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig, RooRealVar* nBkg) {
 
@@ -151,7 +146,6 @@ void Optimise()
 
   // Get the tree
   TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
-  //TTree* D2PimumuTree = (TTree*) f1.Get("D2KmumuOSTuple/DecayTree"); 
  
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);

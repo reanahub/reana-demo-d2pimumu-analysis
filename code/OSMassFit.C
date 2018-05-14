@@ -8,7 +8,7 @@ using namespace TMath;
 using namespace std;
 
 // Get the data
-TFile f1("../1_preselection/D2PiMuMuOS.root", "read");
+TFile f1("../data/D2PiMuMuOS.root", "read");
 
 RooWorkspace* GetWorkspace(std::string file_location) {
 
@@ -72,7 +72,7 @@ RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealV
   frame->SetTitle("Invariant mass of the two muons");
   TPad* p2=(TPad*)c.cd(2); p2->SetPad(0., 0., 1., 0.2);
   frame_pulls->Draw(); line1.Draw(); line2.Draw();
-  c.SaveAs(TString("mass_fits/"+qsq_bin_label+".pdf"));
+  c.SaveAs(TString("../mass_fits/"+qsq_bin_label+".pdf"));
 
   return FitResult;
 }
@@ -121,7 +121,7 @@ void PlotMuMuMass(RooRealVar* MuMuMass, RooDataSet* Data) {
 
     TCanvas c("c", "c", 800, 800);
     frame->Draw();
-    c.SaveAs("MuMuMass.pdf");
+    c.SaveAs("../MuMuMass.pdf");
 }
 
 
@@ -135,7 +135,6 @@ void OSMassFit()
 
   // Get the tree
   TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
-  //TTree* D2PimumuTree = (TTree*) f1.Get("DecayTree"); 
  
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);
@@ -244,11 +243,8 @@ void OSMassFit()
 
     // Perform the fit
     RooFitResult* FitResult = Fit_D2Pimumu_Mass(D_MM, nSig_Dp, nSig_Ds, data_bin[i], Model, qsq_bin_label[i]);
-    Model->getParameters(*data_bin[i])->writeToFile(TString("fitresults/"+qsq_bin_label[i]+".txt"));
+    Model->getParameters(*data_bin[i])->writeToFile(TString("../fitresults/"+qsq_bin_label[i]+".txt"));
 
   }
-
-
-
 } // Do something!
 

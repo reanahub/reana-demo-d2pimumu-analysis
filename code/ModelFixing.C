@@ -8,7 +8,7 @@ using namespace TMath;
 using namespace std;
 
 // Get the data
-TFile f1("../1_preselection/D2PiMuMuOS.root", "read");
+TFile f1("../data/D2PiMuMuOS.root", "read");
 
 RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealVar* nSig_Ds, RooRealVar* nBkg) {
 
@@ -146,7 +146,6 @@ void ModelFixing()
 
   // Get the tree
   TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
-  //TTree* D2PimumuTree = (TTree*) f1.Get("DecayTree"); 
  
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);
@@ -218,28 +217,6 @@ void ModelFixing()
   RooWorkspace *w = new RooWorkspace("w");
   w->import(*Model);
   w->writeToFile("PhiModels.root");
-
-
-
-
-  /***************************** sPlot ***************************/
-  
-  //// sPlot requires non yields to be fixed
-  //RooArgSet* parameters = (RooArgSet*)Model->getParameters(Data_Reduced);
-  ////parameters->Print();
-  //parameters->remove(*nBkg);
-  //parameters->remove(*nSig_Dp);
-  //parameters->remove(*nSig_Ds);
-  ////parameters->Print();
-
-  //TIterator* iter = parameters->createIterator();
-  //for(int i=0; i<parameters->getSize(); i++){
-  //  RooRealVar* var = (RooRealVar*)iter->Next();
-  //  var->setConstant(true);
-  //  //cout << var->GetName() << endl;
-  //}
-  //
-  //RooStats::SPlot* sData_Dp = new RooStats::SPlot("sData_Dp","sData_Dp", *Data_Reduced, Model, RooArgList(*nSig_Dp,*nBkg) );
 
 } // Do something!
 
