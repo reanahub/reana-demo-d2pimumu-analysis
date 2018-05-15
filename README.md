@@ -19,3 +19,4 @@ The result of this analysis are the following plots in various dimuon mass range
 
 The plots can be found in the `mass_fits` folder at the end of the execution.
 
+![](docs/phi.jpg)
