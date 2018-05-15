@@ -1,4 +1,4 @@
-# REANA example
+# REANA example - Search for the rare charm decays 
 
 ## About
 
