@@ -21,4 +21,12 @@ The plots can be found in the `mass_fits` folder at the end of the execution.
 
 One of the final plots, representing the <a href="https://www.codecogs.com/eqnedit.php?latex=\phi" target="_blank"><img src="https://latex.codecogs.com/gif.latex?\phi" title="\phi" /></a> contribution, is shown below.
 
-![](docs/phi.jpg)
+![](docs/phi.png)
+
+![](docs/eta.png)
+
+![](docs/high_dimuon_signal.png)
+
+![](docs/low_dimuon_signal.png)
+
+![](docs/rho_omega.png)
