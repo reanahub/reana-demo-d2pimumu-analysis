@@ -9,6 +9,7 @@ using namespace std;
 
 // Get the data
 TFile f1("../data/D2PiMuMuOS.root", "read");
+//TFile f1("/eos/lhcb/user/a/atrisovi/reana-demo-d2pimumu/data/D2PiMuMuOS.root", "read");
 
 RooWorkspace* GetWorkspace(std::string file_location) {
 
@@ -34,16 +35,16 @@ RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealV
 
   D_MM->setRange("fit_range", 1810,2040);
     
-  RooPlot* frame = D_MM->frame(1810,2040, 100) ;
+  RooPlot* frame = D_MM->frame(1810,2040, 46) ;
   Data->plotOn(frame);
-  Model->plotOn(frame, Range("fit_range"), NormRange("fit_range"), Components("CombBG_PDF"), LineColor(3), LineStyle(2));
-  Model->plotOn(frame, Range("fit_range"), NormRange("fit_range"), Components("signal_model_Dp"), LineColor(2), LineStyle(2));
-  Model->plotOn(frame, Range("fit_range"), NormRange("fit_range"), Components("signal_model_Ds"), LineColor(2), LineStyle(2));
+
+  Model->plotOn(frame, Range("fit_range"), NormRange("fit_range"), Components("CombBG_PDF"), LineColor(4), LineStyle(2));
+  Model->plotOn(frame, Range("fit_range"), NormRange("fit_range"), Components("signal_model_Dp"), LineColor(3), LineStyle(1));
+  Model->plotOn(frame, Range("fit_range"), NormRange("fit_range"), Components("signal_model_Ds"), LineColor(3), LineStyle(1));
   Model->plotOn(frame, Range("fit_range"), NormRange("fit_range"));
 
-  
   RooHist* hpull = frame->pullHist();
-  RooPlot* frame_pulls = D_MM->frame(1810,2040, 100) ;
+  RooPlot* frame_pulls = D_MM->frame(1810,2040, 46) ;
   frame_pulls->addPlotable(hpull,"P");
   frame_pulls->SetTitle("");
   //frame_pulls->GetYaxis()->SetTitle("Pulls");
@@ -55,24 +56,32 @@ RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealV
   frame_pulls->GetXaxis()->SetTitle("");
   frame_pulls->GetXaxis()->SetLabelSize(0);
   
-  TLine line1(1810,2,2040,2);
-  line1.SetLineColor(15);
-  line1.SetLineStyle(7); 
-  
-  TLine line2(1810,-2,2040,-2);
-  line2.SetLineColor(15);
-  line2.SetLineStyle(7);
+  //TLine line1(1810,2,2040,2);
+  //line1.SetLineColor(15);
+  //line1.SetLineStyle(7); 
+  //
+  //TLine line2(1810,-2,2040,-2);
+  //line2.SetLineColor(15);
+  //line2.SetLineStyle(7);
 
+
+
+  frame->SetTitle("");
+  frame->GetXaxis()->SetTitle("m(#pi^{+}#mu^{+}#mu^{-}) [MeV/c^{2}]");
+  frame->GetYaxis()->SetTitle("Candidates/(5 MeV/c^{2})");
   
-  TCanvas c("c", "c", 800, 800);
+  TCanvas c("c", "c", 900, 600);
   c.Divide(1,2);
-  TPad* p1=(TPad*)c.cd(1); p1->SetPad(0., 0.21, 1., 1.);
+  //TPad* p1=(TPad*)c.cd(1); p1->SetPad(0., 0.21, 1., 1.);
   frame->Draw();
   
-  frame->SetTitle("Invariant mass of the two muons");
-  TPad* p2=(TPad*)c.cd(2); p2->SetPad(0., 0., 1., 0.2);
-  frame_pulls->Draw(); line1.Draw(); line2.Draw();
-  c.SaveAs(TString("../mass_fits/"+qsq_bin_label+".pdf"));
+  TLatex *label = new TLatex(0.90,0.8,"LHCb");
+  label->SetTextSize(0.08);
+  label->Draw();
+  
+  //TPad* p2=(TPad*)c.cd(2); p2->SetPad(0., 0., 1., 0.2);
+  //frame_pulls->Draw(); line1.Draw(); line2.Draw();
+  c.SaveAs(TString("mass_fits/"+qsq_bin_label+".pdf"));
 
   return FitResult;
 }
@@ -113,20 +122,22 @@ double InvMass_mumu(RooDataSet* Data, int i) {
 }
 
 void PlotMuMuMass(RooRealVar* MuMuMass, RooDataSet* Data) {
+  
     // Plot m(mumu)
-    RooPlot* frame = MuMuMass->frame(250,2000,100);
+    RooPlot* frame = MuMuMass->frame(250,2000,46);
     Data->plotOn(frame);
     frame->SetXTitle("m(#mu#mu) [MeV/c^2]");
     frame->SetTitleOffset(1.2, "Y");
 
     TCanvas c("c", "c", 800, 800);
     frame->Draw();
-    c.SaveAs("../MuMuMass.pdf");
+    c.SaveAs("MuMuMass.pdf");
 }
 
 
 void OSMassFit() 
 {
+  gROOT->ProcessLine(".L lhcbStyle.C");
   cout << "Hello there" << endl;
   
   // Limits
@@ -152,28 +163,33 @@ void OSMassFit()
   D2PimumuTree->SetBranchStatus("muminus_isMuon",1);
   D2PimumuTree->SetBranchStatus("piplus_PIDmu",1);
   D2PimumuTree->SetBranchStatus("piplus_PIDK",1);
+  D2PimumuTree->SetBranchStatus("piplus_P",1);
 
   // Create the dataset variables
-  RooRealVar* D_MM = new RooRealVar("D_MM", "m(D)", MassMin, MassMax, "MeV/c^{2}");
-  RooRealVar* BDT = new RooRealVar("BDT", "BDT", 0.1, 0.25);
+  RooRealVar* D_MM = new RooRealVar("D_MM", "m(D)", MassMin, MassMax);
+  RooRealVar* BDT = new RooRealVar("BDT", "BDT", 0.18, 0.22);
   RooRealVar* muplus_PX = new RooRealVar("muplus_PX", "muplus_PX", -1e9, 1e9);
   RooRealVar* muplus_PY = new RooRealVar("muplus_PY", "muplus_PY", -1e9, 1e9);
   RooRealVar* muplus_PZ = new RooRealVar("muplus_PZ", "muplus_PZ", -1e9, 1e9);
   RooRealVar* muminus_PX = new RooRealVar("muminus_PX", "muminus_PX", -1e9, 1e9);
   RooRealVar* muminus_PY = new RooRealVar("muminus_PY", "muminus_PY", -1e9, 1e9);
   RooRealVar* muminus_PZ = new RooRealVar("muminus_PZ", "muminus_PZ", -1e9, 1e9);
-  RooRealVar* muplus_PIDmu = new RooRealVar("muplus_PIDmu", "muplus_PIDmu", 2., 1e9);
-  RooRealVar* muminus_PIDmu = new RooRealVar("muminus_PIDmu", "muminus_PIDmu", 2., 1e9);
+  RooRealVar* muplus_PIDmu = new RooRealVar("muplus_PIDmu", "muplus_PIDmu", 2, 1e9);
+  RooRealVar* muminus_PIDmu = new RooRealVar("muminus_PIDmu", "muminus_PIDmu", 2, 1e9);
   RooRealVar* piplus_PIDK = new RooRealVar("piplus_PIDK", "piplus_PIDK", -1e9, 0.);
   RooRealVar* piplus_PIDmu = new RooRealVar("piplus_PIDmu", "piplus_PIDmu", -1e9, 0.);
   RooRealVar* muplus_isMuon = new RooRealVar("muplus_isMuon", "muplus_isMuon", 0.9, 1.1);
   RooRealVar* muminus_isMuon = new RooRealVar("muminus_isMuon", "muminus_isMuon", 0.9, 1.1);
+  RooRealVar* piplus_P = new RooRealVar("piplus_P", "piplus_P", 3000, 1e9);
+  RooRealVar* piplus_PT = new RooRealVar("piplus_PT", "piplus_PT", 500, 1e9);
 
   // Create the RooArgSet that holds the variables
   RooArgSet D2PimumuSet(*D_MM, *BDT, *muplus_PX, *muplus_PY, *muplus_PZ, *muminus_PX, *muminus_PY, *muminus_PZ, *muplus_PIDmu);
   D2PimumuSet.add(*muminus_PIDmu);
   D2PimumuSet.add(*piplus_PIDK);
   D2PimumuSet.add(*piplus_PIDmu);
+  D2PimumuSet.add(*piplus_P);
+  D2PimumuSet.add(*piplus_PT);
   D2PimumuSet.add(*muplus_isMuon);
   D2PimumuSet.add(*muminus_isMuon);
   RooDataSet *All_Data = new RooDataSet("All_Data", "All_Data", D2PimumuSet, Import(*D2PimumuTree));
@@ -197,14 +213,19 @@ void OSMassFit()
   RooRealVar *nSig_Dp = w->var("nSig_Dp");
   RooRealVar *nSig_Ds = w->var("nSig_Ds");
   RooRealVar *nBkg = w->var("nBkg");
-  RooRealVar *K_CombBG = w->var("K_{CombBG}");
-  
+  //RooRealVar *K_CombBG = w->var("K_{CombBG}");
+  RooRealVar *c0 = w->var("c0");
+  RooRealVar *c1 = w->var("c1");
+
   // Fix signal model to fit on phi channel 
   RooArgSet* parameters = (RooArgSet*)Model->getParameters(All_Data);
   parameters->remove(*nBkg);
   parameters->remove(*nSig_Dp);
   parameters->remove(*nSig_Ds);
-  parameters->remove(*K_CombBG);
+  // parameters->remove(*K_CombBG);
+
+  parameters->remove(*c0);
+  parameters->remove(*c1);
 
   TIterator* iter = parameters->createIterator();
   for(int i=0; i<parameters->getSize(); i++){
@@ -243,8 +264,7 @@ void OSMassFit()
 
     // Perform the fit
     RooFitResult* FitResult = Fit_D2Pimumu_Mass(D_MM, nSig_Dp, nSig_Ds, data_bin[i], Model, qsq_bin_label[i]);
-    Model->getParameters(*data_bin[i])->writeToFile(TString("../fitresults/"+qsq_bin_label[i]+".txt"));
-
+    Model->getParameters(*data_bin[i])->writeToFile(TString("fitresults/"+qsq_bin_label[i]+".txt"));
   }
-} // Do something!
+} 
 
