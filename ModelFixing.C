@@ -1,14 +1,33 @@
-#include "RooFitHeaders.h"
 #include "iostream"
 #include "fstream"
 #include <math.h>
+
+#include "RooAddPdf.h"
+#include "RooRealVar.h"
+#include "RooCBShape.h"
+#include "RooExponential.h"
+#include "RooPlot.h"
+#include "RooHist.h"
+#include "RooDataSet.h"
+#include "RooWorkspace.h"
+
+#include "TFile.h"
+#include "TAxis.h"
+#include "TLine.h"
+#include "TCanvas.h"
+#include "TPad.h"
+#include "TTree.h"
+#include "TLorentzVector.h"
+
+#include "TROOT.h"
+#include "TSystem.h"
+
+#include "RooFitHeaders.h"
 
 using namespace RooFit;
 using namespace TMath;
 using namespace std;
 
-// Get the data
-TFile f1("../data/D2PiMuMuOS.root", "read");
 
 RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealVar* nSig_Ds, RooRealVar* nBkg) {
 
@@ -40,11 +59,14 @@ RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealVar* nSig_D
   RooCBShape *cb2_Ds = new RooCBShape("cb2_Ds", "D^{+} cb2", *D_MM, *mean_Ds, *sigma2_Ds, *a2_Ds, *n_Ds);
 
   RooAddPdf *signal_model_Ds = new RooAddPdf("signal_model_Ds", "D^+_s sum of CBs", *cb1_Ds, *cb2_Ds, *cbf_Ds);
-  
-  
+
+ RooRealVar* c0 = new RooRealVar("c0","c0", -2.98339e-01, -1.0, 1.0);
+ RooRealVar* c1 = new RooRealVar("c1","c1", 2.18777e-02, -0.1, 0.1);
+ RooChebychev* CombBG_PDF = new RooChebychev("CombBG_PDF","CombBG_PDF",*D_MM,RooArgSet(*c0,*c1));
+
   // Exponential background model
-  RooRealVar *K_CombBG = new RooRealVar("K_{CombBG}", "K_{CombBG}", -0.001, -1, 1, "c^{2}/MeV");
-  RooExponential *CombBG_PDF = new RooExponential("CombBG_PDF", "CombBG_PDF", *D_MM, *K_CombBG);
+  // RooRealVar *K_CombBG = new RooRealVar("K_{CombBG}", "K_{CombBG}", -0.001, -1, 1, "c^{2}/MeV");
+  // RooExponential *CombBG_PDF = new RooExponential("CombBG_PDF", "CombBG_PDF", *D_MM, *K_CombBG);
 
   return new RooAddPdf("Model", "Model", RooArgList(*signal_model_Dp, *signal_model_Ds, *CombBG_PDF), RooArgList(*nSig_Dp, *nSig_Ds, *nBkg));
 }
@@ -58,17 +80,18 @@ RooFitResult* Fit_D2Pimumu_Mass( RooDataSet* Data, RooAddPdf* Model) {
 
 }
 
-void PlotMass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model) {
+void PlotMass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model, string phimodels_filename) {
   D_MM->setRange("fit_range", 1810,2040);
-    
+
   RooPlot* frame = D_MM->frame(1810,2040, 100) ;
   Data->plotOn(frame);
-  Model->plotOn(frame, NormRange("fit_range"), Components("CombBG_PDF"), LineColor(3), LineStyle(2));
-  Model->plotOn(frame, NormRange("fit_range"), Components("signal_model_Dp"), LineColor(2), LineStyle(2));
-  Model->plotOn(frame, NormRange("fit_range"), Components("signal_model_Ds"), LineColor(2), LineStyle(2));
+
+  Model->plotOn(frame, NormRange("fit_range"), Components("CombBG_PDF"), LineColor(4), LineStyle(2));
+  Model->plotOn(frame, NormRange("fit_range"), Components("signal_model_Dp"), LineColor(3), LineStyle(1));
+  Model->plotOn(frame, NormRange("fit_range"), Components("signal_model_Ds"), LineColor(2), LineStyle(1));
   Model->plotOn(frame, NormRange("fit_range"));
 
-  
+
   RooHist* hpull = frame->pullHist();
   RooPlot* frame_pulls = D_MM->frame(1810,2040, 100) ;
   frame_pulls->addPlotable(hpull,"P");
@@ -80,21 +103,21 @@ void PlotMass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model) {
   frame_pulls->GetYaxis()->SetRangeUser(-5,5);
   frame_pulls->GetXaxis()->SetTitle("");
   frame_pulls->GetXaxis()->SetLabelSize(0);
-  
+
   TLine line1(1810,2,2040,2);
   line1.SetLineColor(15);
-  line1.SetLineStyle(7); 
-  
+  line1.SetLineStyle(7);
+
   TLine line2(1810,-2,2040,-2);
   line2.SetLineColor(15);
   line2.SetLineStyle(7);
 
-  
+
   TCanvas c("c", "c", 800, 800);
   c.Divide(1,2);
   int ipad=1; TPad* p1=(TPad*)c.cd(ipad); p1->SetPad(0., 0.21, 1., 1.); frame->Draw();
   ipad++; TPad* p2=(TPad*)c.cd(ipad); p2->SetPad(0., 0., 1., 0.2); frame_pulls->Draw(); line1.Draw(); line2.Draw();
-  c.SaveAs("PhiModels.pdf");
+  c.SaveAs(TString(phimodels_filename));
 
   return;
 }
@@ -113,40 +136,41 @@ double InvMass_mumu(RooDataSet* Data, int i) {
 
   double MuPlus_Px = Data->get(i)->getRealValue("muplus_PX");
   double MuPlus_Py = Data->get(i)->getRealValue("muplus_PY");
-  double MuPlus_Pz = Data->get(i)->getRealValue("muplus_PZ"); 
- 
+  double MuPlus_Pz = Data->get(i)->getRealValue("muplus_PZ");
+
   double MuMinus_Px = Data->get(i)->getRealValue("muminus_PX");
   double MuMinus_Py = Data->get(i)->getRealValue("muminus_PY");
-  double MuMinus_Pz = Data->get(i)->getRealValue("muminus_PZ"); 
+  double MuMinus_Pz = Data->get(i)->getRealValue("muminus_PZ");
 
   double MuPlus_Psq = MuPlus_Px*MuPlus_Px + MuPlus_Py*MuPlus_Py + MuPlus_Pz*MuPlus_Pz;
   double MuMinus_Psq = MuMinus_Px*MuMinus_Px + MuMinus_Py*MuMinus_Py + MuMinus_Pz*MuMinus_Pz;
-  
-  double MuPlus_E = sqrt(MuPlus_Psq + MuMass*MuMass); 
-  double MuMinus_E = sqrt(MuMinus_Psq + MuMass*MuMass); 
- 
+
+  double MuPlus_E = sqrt(MuPlus_Psq + MuMass*MuMass);
+  double MuMinus_E = sqrt(MuMinus_Psq + MuMass*MuMass);
+
   MuPlus->SetPxPyPzE(MuPlus_Px, MuPlus_Py, MuPlus_Pz, MuPlus_E);
   MuMinus->SetPxPyPzE(MuMinus_Px, MuMinus_Py, MuMinus_Pz, MuMinus_E);
-  
+
   TLorentzVector MuMu = *MuPlus + *MuMinus;
-    
+
   return MuMu.M();
 
 }
 
 
 
-void ModelFixing() 
-{
-  cout << "Hello there" << endl;
-  
+void ModelFixing(const char* inputfilename, const char* phimodels_filename){
+
+  cout << "Running ModelFixing" << endl;
+
   // Limits
   Double_t MassMin = 1775.0;
   Double_t MassMax = 2050.0;
 
-  // Get the tree
-  TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
- 
+  // Get the data
+  TFile f1(inputfilename, "read");
+  TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree");
+
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);
   D2PimumuTree->SetBranchStatus("D_MM",1);
@@ -206,17 +230,17 @@ void ModelFixing()
   RooRealVar *nSig_Dp = new RooRealVar("nSig_Dp", "D+ Signal Yield", 2.e4, -1.e3, 1e6);
   RooRealVar *nSig_Ds = new RooRealVar("nSig_Ds", "Ds Signal Yield", 2.e4, -1.e3, 1e6);
   RooRealVar *nBkg = new RooRealVar("nBkg", "Background Yield", 2.e4, 0., 1e6);
-  
+
   // Create fit model
   RooAddPdf *Model = CreateModel(D_MM, nSig_Dp, nSig_Ds, nBkg);
 
   // Perform the fit
   RooFitResult* FitResult = Fit_D2Pimumu_Mass(Data_Reduced, Model);
-  PlotMass(D_MM, Data_Reduced, Model);
+  PlotMass(D_MM, Data_Reduced, Model, phimodels_filename);
 
   RooWorkspace *w = new RooWorkspace("w");
   w->import(*Model);
-  w->writeToFile("PhiModels.root");
+  w->writeToFile(phimodels_filename);
 
 } // Do something!
 

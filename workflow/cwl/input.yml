@@ -1,0 +1,18 @@
+optimise_tool:
+  class: File
+  path: Optimise.C
+model_fixing_tool:
+  class: File
+  path: ModelFixing.C
+mass_fit_tool:
+  class: File
+  path: OSMassFit.C
+roo_fit_headers:
+  class: File
+  path: RooFitHeaders.h
+lhcb_style:
+  class: File
+  path: lhcbStyle.C
+data:
+  class: File
+  path: data/D2PiMuMuOS.root

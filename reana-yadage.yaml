@@ -1,0 +1,22 @@
+version: 0.6.0
+inputs:
+  parameters:
+    data: data/D2PiMuMuOS.root
+    modelfixing: ModelFixing.C
+    massfit: OSMassFit.C
+    optimise: Optimise.C
+    roofitheaders: RooFitHeaders.h
+    lhcbstyle: lhcbStyle.C
+workflow:
+  type: yadage
+  file: workflow/yadage/workflow.yaml
+outputs:
+  files:
+    - optimisation/MuMuMass_Pi.pdf
+    - optimisation/2D_Optimisation_Pi.pdf
+    - massfitting/low_dimuon_signal.pdf
+    - massfitting/rho_omega.pdf
+    - massfitting/eta.pdf
+    - massfitting/high_dimuon_signal.pdf
+    - massfitting/MuMuMass.pdf
+    - massfitting/phi.pdf

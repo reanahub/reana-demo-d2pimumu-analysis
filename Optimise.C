@@ -1,8 +1,25 @@
-//#include "../Step5_fitting/RootHeaders.h"
-#include "RooFitHeaders.h"
 #include "iostream"
 #include "fstream"
 #include <math.h>
+#include "string.h"
+
+#include "RooAddPdf.h"
+#include "RooRealVar.h"
+#include "RooDataSet.h"
+#include "RooPlot.h"
+#include "RooFitResult.h"
+
+#include "TFile.h"
+#include "TMath.h"
+#include "TLorentzVector.h"
+#include "TTree.h"
+#include "TCanvas.h"
+#include "TH2D.h"
+#include "TGraphErrors.h"
+
+#include "TSystem.h"
+
+#include "RooFitHeaders.h"
 
 using namespace RooFit;
 using namespace TMath;
@@ -13,8 +30,6 @@ bool PlotMass = true;
 string bachelor = "Pi";
 
 // Get the data
-
-TFile f1("../data/D2PiMuMuOS.root", "read");
 
 RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig, RooRealVar* nBkg) {
 
@@ -31,25 +46,25 @@ RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig, RooRealVar* nBkg) {
 }
 
 
-RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model, double BDT_cut, double PID_cut) {
+RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model, double BDT_cut, double PID_cut, string filepath) {
 
   // Apply PID and BDT cuts
   RooDataSet* ReducedData = (RooDataSet*)Data->reduce(TString("BDT>"+to_string(BDT_cut)+"&&muplus_PIDmu>"+to_string(PID_cut)+"&&muminus_PIDmu>"+to_string(PID_cut)));
   RooFitResult* FitResult = Model->fitTo(*ReducedData, Range(1775,1925), Extended(true), Save(true), Strategy(1));
   // Try fit again at new starting values and with Strategy(0) if fit fails
   if (FitResult->covQual()!=3) {
-      Model->getVariables()->setRealValue("nSig", 1.e3);    
-      Model->getVariables()->setRealValue("nBkg", 1.e4);    
-      Model->getVariables()->setRealValue("K_{CombBG}", -0.001);    
-      Model->getVariables()->setRealValue("m_{D}", 1869.6);    
-      Model->getVariables()->setRealValue("sigma", 10.);    
+      Model->getVariables()->setRealValue("nSig", 1.e3);
+      Model->getVariables()->setRealValue("nBkg", 1.e4);
+      Model->getVariables()->setRealValue("K_{CombBG}", -0.001);
+      Model->getVariables()->setRealValue("m_{D}", 1869.6);
+      Model->getVariables()->setRealValue("sigma", 10.);
       RooFitResult* FitResult = Model->fitTo(*ReducedData, Range(1775,1925), Extended(true), Save(true), Strategy(0));
   }
 
-  // Plot mass distribution if PlotMass flag is set 
+  // Plot mass distribution if PlotMass flag is set
   if (PlotMass) {
     D_MM->setRange("fit_range", 1775,1925);
-      
+
     RooPlot* frame = D_MM->frame(1775,1925, 100) ;
     ReducedData->plotOn(frame);
     Model->plotOn(frame, NormRange("fit_range"), Components("CombBG_PDF"), LineColor(3), LineStyle(2));
@@ -58,7 +73,7 @@ RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* 
 
     TCanvas c("c", "c", 800, 800);
     frame->Draw();
-    c.SaveAs(TString("mass_plots/optimisation_BDT_"+to_string(BDT_cut)+"_PID_"+to_string(PID_cut)+"_"+bachelor+".pdf"));
+    c.SaveAs(TString(filepath+"/results/tmp/optimisation_BDT_"+to_string(BDT_cut)+"_PID_"+to_string(PID_cut)+"_"+bachelor+".pdf"));
   }
 
   return FitResult;
@@ -78,56 +93,56 @@ double InvMass_mumu(RooDataSet* Data, int i) {
 
   double MuPlus_Px = Data->get(i)->getRealValue("muplus_PX");
   double MuPlus_Py = Data->get(i)->getRealValue("muplus_PY");
-  double MuPlus_Pz = Data->get(i)->getRealValue("muplus_PZ"); 
- 
+  double MuPlus_Pz = Data->get(i)->getRealValue("muplus_PZ");
+
   double MuMinus_Px = Data->get(i)->getRealValue("muminus_PX");
   double MuMinus_Py = Data->get(i)->getRealValue("muminus_PY");
-  double MuMinus_Pz = Data->get(i)->getRealValue("muminus_PZ"); 
+  double MuMinus_Pz = Data->get(i)->getRealValue("muminus_PZ");
 
   double MuPlus_Psq = MuPlus_Px*MuPlus_Px + MuPlus_Py*MuPlus_Py + MuPlus_Pz*MuPlus_Pz;
   double MuMinus_Psq = MuMinus_Px*MuMinus_Px + MuMinus_Py*MuMinus_Py + MuMinus_Pz*MuMinus_Pz;
-  
-  double MuPlus_E = sqrt(MuPlus_Psq + MuMass*MuMass); 
-  double MuMinus_E = sqrt(MuMinus_Psq + MuMass*MuMass); 
- 
+
+  double MuPlus_E = sqrt(MuPlus_Psq + MuMass*MuMass);
+  double MuMinus_E = sqrt(MuMinus_Psq + MuMass*MuMass);
+
   MuPlus->SetPxPyPzE(MuPlus_Px, MuPlus_Py, MuPlus_Pz, MuPlus_E);
   MuMinus->SetPxPyPzE(MuMinus_Px, MuMinus_Py, MuMinus_Pz, MuMinus_E);
-  
+
   TLorentzVector MuMu = *MuPlus + *MuMinus;
-    
+
   return MuMu.M();
 
 }
 
 
-void PlotMuMuMass(RooRealVar* MuMuMass, RooDataSet* Data) {
+void PlotMuMuMass(RooRealVar* MuMuMass, RooDataSet* Data, string filepath) {
     // Plot m(mumu)
     RooPlot* frame = MuMuMass->frame(250,2000,100);
     Data->plotOn(frame);
-    
+
     frame->SetXTitle("m(#mu#mu) [MeV/c^2]");
     frame->SetTitleOffset(1.2, "Y");
 
     TCanvas c("c", "c", 800, 800);
     frame->Draw();
-    c.SaveAs(TString("MuMuMass_"+bachelor+".pdf"));
+    c.SaveAs(TString(filepath+"/MuMuMass_"+bachelor+".pdf"));
 }
 
 
-void Plot(int numIters, Double_t BDT_cuts[numIters], Double_t Significance_FoM[numIters], Double_t BDT_cuts_err[numIters], Double_t Significance_FoM_err[numIters]) {
+void Plot(int numIters, Double_t BDT_cuts[numIters], Double_t Significance_FoM[numIters], Double_t BDT_cuts_err[numIters], Double_t Significance_FoM_err[numIters], string filepath) {
   TGraphErrors * gr = new TGraphErrors(numIters, BDT_cuts, Significance_FoM, BDT_cuts_err, Significance_FoM_err);
- 
+
   gr->SetTitle("Optimisation");
   gr->GetXaxis()->SetTitle("BDT>");
   gr->GetYaxis()->SetTitle("Significance FoM");
 
-  TCanvas c("c", "c", 800, 800);
-  gr->Draw("AP");
-  c.SaveAs(TString("Optimisation_"+bachelor+".pdf"));
+    TCanvas c("c", "c", 800, 800);
+    gr->Draw("AP");
+    c.SaveAs(TString(filepath+"/Optimisation_"+bachelor+".pdf"));
 
 }
 
-void Plot(TH2D* h) {
+void Plot(TH2D* h, string filepath) {
   TCanvas c("c", "c", 800, 800);
   h->SetTitle("Significance; BDT cut; PIDmu cut");
   h->SetStats(0);
@@ -136,17 +151,18 @@ void Plot(TH2D* h) {
 }
 
 
-void Optimise() 
+void Optimise(const char* inputfilename, string filepath)
 {
-  cout << "Hello there" << endl;
-  
+  cout << "Running Optimise" << endl;
+
   // Limits
   Double_t MassMin = 1775.0;
   Double_t MassMax = 2050.0;
 
   // Get the tree
-  TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
- 
+  TFile f1(inputfilename, "read");
+  TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree");
+
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);
   D2PimumuTree->SetBranchStatus("D_MM",1);
@@ -207,14 +223,14 @@ void Optimise()
   }
   All_Data->merge(MuMu_Data);
 
-  PlotMuMuMass(MuMuMass, All_Data);
+  PlotMuMuMass(MuMuMass, All_Data, filepath);
 
   RooDataSet* Data_Reduced = (RooDataSet*)All_Data->reduce("MuMuMass>850&&MuMuMass<1250");
   Data_Reduced->Print();
 
   RooRealVar *nSig = new RooRealVar("nSig", "Signal Yield", 1.e3, 0., 1e6);
   RooRealVar *nBkg = new RooRealVar("nBkg", "Background Yield", 1.e4, 0., 1e6);
-  
+
   // Create simple model
   RooAddPdf *Model = CreateModel(D_MM, nSig, nBkg);
 
@@ -226,35 +242,35 @@ void Optimise()
   double PID_cut = -2;
   double PID_increment = 0.5;
 
-  TH2D *hBDT_PID = new TH2D("hBDT_PID", "hBDT_PID", numIters, BDT_cut, BDT_cut+numIters*BDT_increment, numIters_PID, PID_cut, PID_cut+numIters_PID*PID_increment); 
+  TH2D *hBDT_PID = new TH2D("hBDT_PID", "hBDT_PID", numIters, BDT_cut, BDT_cut+numIters*BDT_increment, numIters_PID, PID_cut, PID_cut+numIters_PID*PID_increment);
   hBDT_PID->Sumw2();
-  
+
   //Double_t BDT_cuts[numIters];
   //Double_t BDT_cuts_err[numIters];
   //Double_t Significance_FoM[numIters];
   //Double_t Significance_FoM_err[numIters];
-    
+
   for (int i=0; i<numIters; i++) {
-    
+
     double PID_cut = -2;
     nSig->setVal(1.e3);
     nBkg->setVal(1.e4);
-    
+
     for (int j=0; j<numIters_PID; j++) {
-      
-      //Model->getVariables()->setRealValue("K_{CombBG}", -0.006);    
-      //Model->getVariables()->setRealValue("m_{D}", 1869.6);    
-      //Model->getVariables()->setRealValue("sigma", 10.);    
+
+      //Model->getVariables()->setRealValue("K_{CombBG}", -0.006);
+      //Model->getVariables()->setRealValue("m_{D}", 1869.6);
+      //Model->getVariables()->setRealValue("sigma", 10.);
 
       // Perform the fit
-      RooFitResult* FitResult = Fit_D2Pimumu_Mass(D_MM, Data_Reduced, Model, BDT_cut, PID_cut);
+      RooFitResult* FitResult = Fit_D2Pimumu_Mass(D_MM, Data_Reduced, Model, BDT_cut, PID_cut, filepath);
 
       // Determine background in D+ signal window +/- 25 MeV around peak
       D_MM->setRange("signal", 1869.62-25, 1869.62+25);
       RooExponential* bkg_model = (RooExponential*)Model->pdfList().find("CombBG_PDF");
       bkg_model->Print();
       double B_norm = bkg_model->createIntegral(RooArgSet(*D_MM), RooArgSet(*D_MM), "signal")->getVal()*nBkg->getVal();
-      double S_norm = nSig->getVal(); 
+      double S_norm = nSig->getVal();
       double B_norm_err = bkg_model->createIntegral(RooArgSet(*D_MM), RooArgSet(*D_MM), "signal")->getVal()*nBkg->getError();
       double S_norm_err = nSig->getError();
 
@@ -269,15 +285,15 @@ void Optimise()
 
       // Use significance FoM S/sqrt(S+B)
       double Significance_FoM = S_sig/sqrt(S_sig+B_sig);
-      
+
       // Shift cuts to avoid filling at the bin boundary
       hBDT_PID->Fill(BDT_cut+1.*BDT_increment/2, PID_cut+1.*PID_increment/2, Significance_FoM);
-      
+
       //Significance_FoM = S_sig/sqrt(S_sig+B_sig);
       //Significance_FoM_err[i] = sqrt( pow((S_sig+2*B_sig)*S_sig_err,2)/(2*pow(S_sig+B_sig,3)) + pow(S_sig*B_sig_err,2)/(4*pow(S_sig+B_sig,3)) );
       //BDT_cuts[i] = BDT_cut;
       //BDT_cuts_err[i] = 0;
-   
+
       PID_cut = PID_cut + PID_increment;
 
     }
@@ -285,6 +301,6 @@ void Optimise()
   }
 
   //Plot(numIters, BDT_cuts, Significance_FoM, BDT_cuts_err, Significance_FoM_err);
-  Plot(hBDT_PID);
+  Plot(hBDT_PID, filepath);
 
 } // Do something!
