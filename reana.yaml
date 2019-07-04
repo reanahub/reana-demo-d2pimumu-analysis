@@ -1,11 +1,23 @@
-# TODO
-#
-# command sequence:
-#
-# source /cvmfs/lhcb.cern.ch/lib/LbLogin.sh
-# lb-run DaVinci/latest bash -f
-# root Optimise.C
-# root ModelFixing.C
-# mkdir fitresults
-# mkdir mass_fits
-# root OSMassFit.C 
+version: 0.3.0
+inputs:
+  files:
+    # - code/Optimise.C
+    - code/ModelFixing.C
+    - code/OSMassFit.C
+  parameters:
+    # data: data/small.root
+    data: data/D2PiMuMuOS-small.root
+    # data: data/D2PiMuMuOS.root
+workflow:
+  type: serial
+  specification:
+    steps:
+      - environment: 'reanahub/reana-env-root6'
+        commands:
+        - mkdir -p results/tmp
+        # - root -b -q 'code/Optimise.C("${data}")'
+        - root -b -q 'code/ModelFixing.C("${data}", "results/tmp/PhiModels.root")' | tee model_fixing.log
+        - root -b -q 'code/OSMassFit.C("${data}", "results/tmp/PhiModels.root", "results/low_dimuon_signal.pdf")'  | tee massfit.log
+outputs:
+  files:
+    - results/low_dimuon_signal.pdf

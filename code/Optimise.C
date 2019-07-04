@@ -1,20 +1,16 @@
-//#include "../Step5_fitting/RootHeaders.h"
-#include "RooFitHeaders.h"
 #include "iostream"
 #include "fstream"
 #include <math.h>
+#include "string.h"
 
 using namespace RooFit;
 using namespace TMath;
 using namespace std;
 
 // Set to true to make plots of the mass distribution for each BDT and PID cut
-bool PlotMass = true;
+bool PlotMass = false;
 string bachelor = "Pi";
 
-// Get the data
-
-TFile f1("../data/D2PiMuMuOS.root", "read");
 
 RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig, RooRealVar* nBkg) {
 
@@ -58,7 +54,7 @@ RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* 
 
     TCanvas c("c", "c", 800, 800);
     frame->Draw();
-    c.SaveAs(TString("mass_plots/optimisation_BDT_"+to_string(BDT_cut)+"_PID_"+to_string(PID_cut)+"_"+bachelor+".pdf"));
+    c.SaveAs(TString("results/tmp/optimisation_BDT_"+to_string(BDT_cut)+"_PID_"+to_string(PID_cut)+"_"+bachelor+".pdf"));
   }
 
   return FitResult;
@@ -110,7 +106,7 @@ void PlotMuMuMass(RooRealVar* MuMuMass, RooDataSet* Data) {
 
     TCanvas c("c", "c", 800, 800);
     frame->Draw();
-    c.SaveAs(TString("MuMuMass_"+bachelor+".pdf"));
+    c.SaveAs(TString("results/tmp/MuMuMass_"+bachelor+".pdf"));
 }
 
 
@@ -123,7 +119,7 @@ void Plot(int numIters, Double_t BDT_cuts[numIters], Double_t Significance_FoM[n
 
   TCanvas c("c", "c", 800, 800);
   gr->Draw("AP");
-  c.SaveAs(TString("Optimisation_"+bachelor+".pdf"));
+  c.SaveAs(TString("results/tmp/Optimisation_"+bachelor+".pdf"));
 
 }
 
@@ -132,21 +128,40 @@ void Plot(TH2D* h) {
   h->SetTitle("Significance; BDT cut; PIDmu cut");
   h->SetStats(0);
   h->Draw("COLZ");
-  c.SaveAs(TString("2D_Optimisation_"+bachelor+".pdf"));
+  c.SaveAs(TString("results/tmp/2D_Optimisation_"+bachelor+".pdf"));
 }
 
+const char * ReadTreeLocationFromFileName(const char* inputfilename){
 
-void Optimise() 
+  // Get the tree
+  if ( strncmp(inputfilename,"small.root", 5) ) { 
+    return "DecayTree";
+  }
+  else { 
+    return "D2PimumuOSTuple/DecayTree";
+  }
+}
+
+void Optimise(const char* inputfilename) 
 {
   cout << "Hello there" << endl;
-  
+
+    // Load the custom root fit headers
+  // R__ADD_LIBRARY_PATH($FOODIR) // if needed
+  // R__LOAD_LIBRARY(code/RooFitHeaders.h)
+  gSystem->Load("RooFitHeaders.h");
+
   // Limits
   Double_t MassMin = 1775.0;
   Double_t MassMax = 2050.0;
 
-  // Get the tree
-  TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
- 
+  // Get the data
+  TFile f1(inputfilename, "read");
+  cout << inputfilename << endl;
+  auto tree_location = ReadTreeLocationFromFileName(inputfilename);
+  cout << tree_location << endl;
+  TTree* D2PimumuTree = (TTree*) f1.Get(tree_location); 
+
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);
   D2PimumuTree->SetBranchStatus("D_MM",1);
@@ -188,6 +203,7 @@ void Optimise()
 
 
   // Create the RooArgSet that holds the variables
+  // root [#0] ERROR:InputArguments -- RooArgSet::checkForDup: ERROR argument with name Model_Int[D_MM|fit_nll_Model_All_Data]_Norm[D_MM] is already in this set
   RooArgSet D2PimumuSet(*D_MM, *BDT, *muplus_PX, *muplus_PY, *muplus_PZ, *muminus_PX, *muminus_PY, *muminus_PZ, *muplus_PIDmu);
   D2PimumuSet.add(*muminus_PIDmu);
   D2PimumuSet.add(*piplus_PIDK);

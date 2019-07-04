@@ -1,4 +1,3 @@
-#include "RooFitHeaders.h"
 #include "iostream"
 #include "fstream"
 #include <math.h>
@@ -7,23 +6,7 @@ using namespace RooFit;
 using namespace TMath;
 using namespace std;
 
-// Get the data
-TFile f1("../data/D2PiMuMuOS.root", "read");
-//TFile f1("/eos/lhcb/user/a/atrisovi/reana-demo-d2pimumu/data/D2PiMuMuOS.root", "read");
-
-RooWorkspace* GetWorkspace(std::string file_location) {
-
-  TFile *tf = new TFile("PhiModels.root");
-  RooWorkspace* w = (RooWorkspace*)tf->Get("w");
-  tf->Close();
-  w->Print();
-    
-  return w;
-
-}
-
-
-RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealVar* nSig_Ds, RooDataSet* Data, RooAddPdf* Model, string qsq_bin_label) {
+RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealVar* nSig_Ds, RooDataSet* Data, RooAddPdf* Model, string qsq_bin_label, const char* outfile) {
 
   // Set initial value of yields to 0 when fitting to dimuon q^2 bins
   if (qsq_bin_label=="low_dimuon_signal"||qsq_bin_label=="high_dimuon_signal"){
@@ -81,7 +64,7 @@ RooFitResult* Fit_D2Pimumu_Mass( RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealV
   
   //TPad* p2=(TPad*)c.cd(2); p2->SetPad(0., 0., 1., 0.2);
   //frame_pulls->Draw(); line1.Draw(); line2.Draw();
-  c.SaveAs(TString("mass_fits/"+qsq_bin_label+".pdf"));
+  c.SaveAs(TString(outfile));
 
   return FitResult;
 }
@@ -131,22 +114,44 @@ void PlotMuMuMass(RooRealVar* MuMuMass, RooDataSet* Data) {
 
     TCanvas c("c", "c", 800, 800);
     frame->Draw();
-    c.SaveAs("MuMuMass.pdf");
+    c.SaveAs(TString("/results/MuMuMass.pdf"));
 }
 
+const char * ReadTreeLocationFromFileName(const char* inputfilename){
 
-void OSMassFit() 
+  // Get the tree
+  if ( strncmp(inputfilename,"small.root", 5) ) { 
+    return "DecayTree";
+  }
+  else { 
+    return "D2PimumuOSTuple/DecayTree";
+  }
+}
+
+void OSMassFit(const char* inputfilename, const char* directory, const char* outfile)
 {
-  gROOT->ProcessLine(".L lhcbStyle.C");
+  // Load the custom root fit headers
+
   cout << "Hello there" << endl;
-  
+
+  // Load the custom root fit headers
+  // R__ADD_LIBRARY_PATH($FOODIR) // if needed
+  // R__LOAD_LIBRARY(code/RooFitHeaders.h)
+  // R__LOAD_LIBRARY(code/lhcbStyle.C)
+  gSystem->Load("RooFitHeaders.h");
+  gSystem->Load("lhcbStyle.C");
+
+  // Get the data
+  TFile f1(inputfilename, "read");
+  auto tree_location = ReadTreeLocationFromFileName(inputfilename);
+
+  TTree* D2PimumuTree = (TTree*) f1.Get(tree_location);
+
   // Limits
   Double_t MassMin = 1775.0;
   Double_t MassMax = 2050.0;
 
-  // Get the tree
-  TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
- 
+
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);
   D2PimumuTree->SetBranchStatus("D_MM",1);
@@ -206,9 +211,11 @@ void OSMassFit()
   All_Data->merge(MuMu_Data);
   PlotMuMuMass(MuMuMass, All_Data);
 
-  // Create fit model
-  RooWorkspace* w = GetWorkspace("PhiModels.root");
-  
+  // TFile *tf(directory.c_str());
+  TFile *tf = new TFile(directory);
+  RooWorkspace* w = (RooWorkspace*)tf->Get("w");
+  tf->Close();
+
   RooAddPdf *Model = (RooAddPdf*)w->pdf("Model");
   RooRealVar *nSig_Dp = w->var("nSig_Dp");
   RooRealVar *nSig_Ds = w->var("nSig_Ds");
@@ -217,23 +224,23 @@ void OSMassFit()
   RooRealVar *c0 = w->var("c0");
   RooRealVar *c1 = w->var("c1");
 
-  // Fix signal model to fit on phi channel 
+  // Fix signal model to fit on phi channel
   RooArgSet* parameters = (RooArgSet*)Model->getParameters(All_Data);
   parameters->remove(*nBkg);
   parameters->remove(*nSig_Dp);
   parameters->remove(*nSig_Ds);
   // parameters->remove(*K_CombBG);
 
-  parameters->remove(*c0);
-  parameters->remove(*c1);
+  //parameters->remove(*c0);
+  //parameters->remove(*c1);
 
   TIterator* iter = parameters->createIterator();
   for(int i=0; i<parameters->getSize(); i++){
     RooRealVar* var = (RooRealVar*)iter->Next();
     var->setConstant(true);
     }
-  
-  
+
+
   // Define q^2 bins (thesis page 70)
   int nBins = 5;
   std::vector<RooDataSet*> data_bin(nBins);
@@ -246,11 +253,11 @@ void OSMassFit()
   qsq_bin_label[3] = "phi";
   qsq_bin_label[4] = "high_dimuon_signal";
 
-  qsq_min_val[0] = 250.; 
-  qsq_min_val[1] = 525.; 
-  qsq_min_val[2] = 565.; 
-  qsq_min_val[3] = 850.; 
-  qsq_min_val[4] = 1250.; 
+  qsq_min_val[0] = 250.;
+  qsq_min_val[1] = 525.;
+  qsq_min_val[2] = 565.;
+  qsq_min_val[3] = 850.;
+  qsq_min_val[4] = 1250.;
 
   qsq_max_val[0] = 525.;
   qsq_max_val[1] = 565.;
@@ -263,8 +270,7 @@ void OSMassFit()
     data_bin[i] = (RooDataSet*)All_Data->reduce(TString("MuMuMass>"+to_string(qsq_min_val[i])+"&&MuMuMass<"+to_string(qsq_max_val[i])));
 
     // Perform the fit
-    RooFitResult* FitResult = Fit_D2Pimumu_Mass(D_MM, nSig_Dp, nSig_Ds, data_bin[i], Model, qsq_bin_label[i]);
-    Model->getParameters(*data_bin[i])->writeToFile(TString("fitresults/"+qsq_bin_label[i]+".txt"));
+    RooFitResult* FitResult = Fit_D2Pimumu_Mass(D_MM, nSig_Dp, nSig_Ds, data_bin[i], Model, qsq_bin_label[i], outfile);
+    Model->getParameters(*data_bin[i])->writeToFile(TString(std::string("/results/tmp/") +qsq_bin_label[i]+std::string(".txt")));
   }
-} 
-
+}

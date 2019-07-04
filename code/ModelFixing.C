@@ -1,4 +1,3 @@
-#include "RooFitHeaders.h"
 #include "iostream"
 #include "fstream"
 #include <math.h>
@@ -7,8 +6,6 @@ using namespace RooFit;
 using namespace TMath;
 using namespace std;
 
-// Get the data
-TFile f1("../data/D2PiMuMuOS.root", "read");
 
 RooAddPdf* CreateModel(RooRealVar* D_MM, RooRealVar* nSig_Dp, RooRealVar* nSig_Ds, RooRealVar* nBkg) {
 
@@ -58,7 +55,7 @@ RooFitResult* Fit_D2Pimumu_Mass( RooDataSet* Data, RooAddPdf* Model) {
 
 }
 
-void PlotMass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model) {
+void PlotMass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model, string phimodels_filename) {
   D_MM->setRange("fit_range", 1810,2040);
     
   RooPlot* frame = D_MM->frame(1810,2040, 100) ;
@@ -94,7 +91,7 @@ void PlotMass( RooRealVar* D_MM, RooDataSet* Data, RooAddPdf* Model) {
   c.Divide(1,2);
   int ipad=1; TPad* p1=(TPad*)c.cd(ipad); p1->SetPad(0., 0.21, 1., 1.); frame->Draw();
   ipad++; TPad* p2=(TPad*)c.cd(ipad); p2->SetPad(0., 0., 1., 0.2); frame_pulls->Draw(); line1.Draw(); line2.Draw();
-  c.SaveAs("PhiModels.pdf");
+  c.SaveAs(TString(phimodels_filename));
 
   return;
 }
@@ -134,19 +131,36 @@ double InvMass_mumu(RooDataSet* Data, int i) {
 
 }
 
+const char * ReadTreeLocationFromFileName(const char* inputfilename){
+
+  // Get the tree
+  if ( strncmp(inputfilename,"small.root", 5) ) { 
+    return "DecayTree";
+  }
+  else { 
+    return "D2PimumuOSTuple/DecayTree";
+  }
+}
 
 
-void ModelFixing() 
-{
+void ModelFixing(const char* inputfilename, const char* phimodels_filename){
   cout << "Hello there" << endl;
-  
+
+  // Load the custom root fit headers
+  // R__ADD_LIBRARY_PATH(gSystem->pwd()) // if needed
+  // R__LOAD_LIBRARY(code/RooFitHeaders.h)
+  gSystem->Load("RooFitHeaders.h");
+
   // Limits
   Double_t MassMin = 1775.0;
   Double_t MassMax = 2050.0;
 
-  // Get the tree
-  TTree* D2PimumuTree = (TTree*) f1.Get("D2PimumuOSTuple/DecayTree"); 
- 
+  // Get the data
+  TFile f1(inputfilename, "read");
+  auto tree_location = ReadTreeLocationFromFileName(inputfilename);
+
+  TTree* D2PimumuTree = (TTree*) f1.Get(tree_location); 
+
   // Disable all branches and only enable ones we need
   D2PimumuTree->SetBranchStatus("*",0);
   D2PimumuTree->SetBranchStatus("D_MM",1);
@@ -212,11 +226,11 @@ void ModelFixing()
 
   // Perform the fit
   RooFitResult* FitResult = Fit_D2Pimumu_Mass(Data_Reduced, Model);
-  PlotMass(D_MM, Data_Reduced, Model);
+  PlotMass(D_MM, Data_Reduced, Model, phimodels_filename);
 
   RooWorkspace *w = new RooWorkspace("w");
   w->import(*Model);
-  w->writeToFile("PhiModels.root");
+  w->writeToFile(phimodels_filename);
 
 } // Do something!
 
