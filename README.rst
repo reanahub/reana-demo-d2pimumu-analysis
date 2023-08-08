@@ -255,7 +255,7 @@ workflow steps and expected outputs:
       type: serial
       specification:
         steps:
-          - environment: 'reanahub/reana-env-root6'
+          - environment: 'docker.io/reanahub/reana-env-root6'
             commands:
             - mkdir -p results/tmp && mkdir -p logs
             - root -b -q 'Optimise.C("${data}", "results")' | tee logs/optimise.log

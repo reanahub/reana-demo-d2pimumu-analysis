@@ -35,7 +35,7 @@ stages:
             plot_mumumass: out_plot_mumumass
         environment:
           environment_type: 'docker-encapsulated'
-          image: 'reanahub/reana-env-root6'
+          image: 'docker.io/reanahub/reana-env-root6'
 
   - name: theoreticalmodelfixing
     dependencies: [optimisation]
@@ -55,7 +55,7 @@ stages:
             phimodels: outfilename
         environment:
           environment_type: 'docker-encapsulated'
-          image: 'reanahub/reana-env-root6'
+          image: 'docker.io/reanahub/reana-env-root6'
 
   - name: massfitting
     dependencies: [theoreticalmodelfixing]
@@ -86,4 +86,4 @@ stages:
             plot_phi: out_plot_phi
         environment:
           environment_type: 'docker-encapsulated'
-          image: 'reanahub/reana-env-root6'
+          image: 'docker.io/reanahub/reana-env-root6'
